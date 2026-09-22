@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>TruthLens | Fake News Detector</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <nav class="navbar">
+
+        <div class="logo">
+            <span>◈</span> TruthLens
+        </div>
+
+        <div class="nav-text">
+            AI-Powered Fake News Detection
+        </div>
+
+    </nav>
+
+
+    <main class="container">
+
+        <!-- HERO -->
+
+        <section class="hero">
+
+            <div class="badge">
+                NLP • MACHINE LEARNING
+            </div>
+
+            <h1>
+                Detect <span>Fake News</span><br>
+                with AI
+            </h1>
+
+            <p>
+                Analyze news headlines and articles using
+                Natural Language Processing and Machine Learning.
+            </p>
+
+        </section>
+
+
+        <!-- ANALYZER -->
+
+        <section class="card analyzer">
+
+            <div class="section-title">
+
+                <div>
+                    <h2>News Analyzer</h2>
+
+                    <p>
+                        Enter a news headline or article to check
+                        whether it appears real or fake.
+                    </p>
+                </div>
+
+            </div>
+
+
+            <!-- MODEL -->
+
+            <div class="form-group">
+
+                <label for="model">
+                    Select Machine Learning Model
+                </label>
+
+                <select id="model">
+
+                    <option value="Naive Bayes">
+                        Naive Bayes
+                    </option>
+
+                    <option value="Decision Tree">
+                        Decision Tree
+                    </option>
+
+                    <option value="Passive Aggressive">
+                        Passive Aggressive
+                    </option>
+
+                    <option value="Logistic Regression">
+                        Logistic Regression
+                    </option>
+
+                    <option value="Random Forest">
+                        Random Forest
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- TITLE -->
+
+            <div class="form-group">
+
+                <label for="title">
+                    News Headline
+                </label>
+
+                <input
+                    type="text"
+                    id="title"
+                    placeholder="Enter the news headline..."
+                >
+
+            </div>
+
+
+            <!-- ARTICLE -->
+
+            <div class="form-group">
+
+                <label for="article">
+                    News Article
+                </label>
+
+                <textarea
+                    id="article"
+                    rows="8"
+                    placeholder="Paste the news article here..."
+                ></textarea>
+
+            </div>
+
+
+            <!-- BUTTON -->
+
+            <button
+                class="analyze-btn"
+                onclick="analyzeNews()">
+
+                🔍 Analyze News
+
+            </button>
+
+
+            <!-- RESULT -->
+
+            <div
+                id="resultBox"
+                class="result-box hidden">
+
+                <div id="resultIcon"></div>
+
+                <div>
+
+                    <div
+                        id="resultText"
+                        class="result-text">
+                    </div>
+
+                    <div
+                        id="confidenceText"
+                        class="confidence">
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- DATASET STATS -->
+
+        <section class="stats">
+
+            <div class="stat-card">
+
+                <div class="stat-number">
+                    {{ total_articles }}
+                </div>
+
+                <div class="stat-label">
+                    Total Articles
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-number">
+                    {{ real_articles }}
+                </div>
+
+                <div class="stat-label">
+                    Real News
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-number">
+                    {{ fake_articles }}
+                </div>
+
+                <div class="stat-label">
+                    Fake News
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- MODEL PERFORMANCE -->
+
+        <section class="card">
+
+            <div class="section-title">
+
+                <div>
+
+                    <h2>Model Performance</h2>
+
+                    <p>
+                        Performance of different classifiers
+                        on the test dataset.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Model</th>
+                            <th>Accuracy</th>
+                            <th>Precision</th>
+                            <th>Recall</th>
+                            <th>F1 Score</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for model, values in metrics.items() %}
+
+                        <tr>
+
+                            <td>
+                                <strong>
+                                    {{ model }}
+                                </strong>
+                            </td>
+
+                            <td>
+                                {{ values.accuracy }}%
+                            </td>
+
+                            <td>
+                                {{ values.precision }}%
+                            </td>
+
+                            <td>
+                                {{ values.recall }}%
+                            </td>
+
+                            <td>
+                                {{ values.f1 }}%
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+        <!-- HOW IT WORKS -->
+
+        <section class="card">
+
+            <div class="section-title">
+
+                <div>
+
+                    <h2>How It Works</h2>
+
+                    <p>
+                        The system follows a complete NLP pipeline.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="pipeline">
+
+                <div class="pipeline-step">
+
+                    <div class="step-number">01</div>
+
+                    <h3>Input</h3>
+
+                    <p>
+                        User enters a news headline
+                        and article.
+                    </p>
+
+                </div>
+
+
+                <div class="arrow">→</div>
+
+
+                <div class="pipeline-step">
+
+                    <div class="step-number">02</div>
+
+                    <h3>Preprocessing</h3>
+
+                    <p>
+                        Tokenization, lowercase conversion
+                        and stopword removal.
+                    </p>
+
+                </div>
+
+
+                <div class="arrow">→</div>
+
+
+                <div class="pipeline-step">
+
+                    <div class="step-number">03</div>
+
+                    <h3>TF-IDF</h3>
+
+                    <p>
+                        Text is converted into
+                        numerical features.
+                    </p>
+
+                </div>
+
+
+                <div class="arrow">→</div>
+
+
+                <div class="pipeline-step">
+
+                    <div class="step-number">04</div>
+
+                    <h3>Prediction</h3>
+
+                    <p>
+                        Machine learning model predicts
+                        REAL or FAKE.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <footer>
+
+            <p>
+                TruthLens • NLP Fake News Detection Project
+            </p>
+
+            <p>
+                Built using Python • Flask • NLTK • Scikit-learn
+            </p>
+
+        </footer>
+
+    </main>
+
+
+    <script>
+
+        async function analyzeNews() {
+
+            const title =
+                document.getElementById("title").value.trim();
+
+            const article =
+                document.getElementById("article").value.trim();
+
+            const model =
+                document.getElementById("model").value;
+
+
+            if (!title && !article) {
+
+                alert(
+                    "Please enter a headline or article first."
+                );
+
+                return;
+            }
+
+
+            const button =
+                document.querySelector(".analyze-btn");
+
+            button.innerHTML =
+                "⏳ Analyzing...";
+
+            button.disabled = true;
+
+
+            try {
+
+                const response =
+                    await fetch("/api/predict", {
+
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            title: title,
+
+                            article: article,
+
+                            model: model
+
+                        })
+
+                    });
+
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    alert(data.error);
+
+                    return;
+                }
+
+
+                const resultBox =
+                    document.getElementById(
+                        "resultBox"
+                    );
+
+                const resultText =
+                    document.getElementById(
+                        "resultText"
+                    );
+
+                const confidenceText =
+                    document.getElementById(
+                        "confidenceText"
+                    );
+
+                const resultIcon =
+                    document.getElementById(
+                        "resultIcon"
+                    );
+
+
+                resultBox.classList.remove(
+                    "hidden"
+                );
+
+
+                if (data.result === "REAL") {
+
+                    resultBox.className =
+                        "result-box real";
+
+                    resultIcon.innerHTML =
+                        "✓";
+
+                    resultText.innerHTML =
+                        "REAL NEWS";
+
+                } else {
+
+                    resultBox.className =
+                        "result-box fake";
+
+                    resultIcon.innerHTML =
+                        "✕";
+
+                    resultText.innerHTML =
+                        "FAKE NEWS";
+                }
+
+
+                confidenceText.innerHTML =
+                    "Model: " +
+                    data.model +
+                    " • Confidence: " +
+                    data.confidence +
+                    "%";
+
+
+                resultBox.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+
+
+            } catch (error) {
+
+                alert(
+                    "Something went wrong. Make sure the Flask server is running."
+                );
+
+                console.error(error);
+
+            } finally {
+
+                button.innerHTML =
+                    "🔍 Analyze News";
+
+                button.disabled = false;
+
+            }
+
+        }
+
+    </script>
+
+</body>
+
+</html>
