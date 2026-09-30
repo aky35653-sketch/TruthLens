@@ -1,10 +1,9 @@
 from flask import Flask, render_template, request, jsonify
+import re
 import pandas as pd
-import nltk
 
-from nltk.corpus import stopwords
 from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, ENGLISH_STOP_WORDS
 
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.tree import DecisionTreeClassifier
@@ -22,54 +21,68 @@ app = Flask(__name__)
 
 
 # --------------------------------------------------
-# NLTK
+# TEXT PREPROCESSING
 # --------------------------------------------------
 
-nltk.download("punkt")
-nltk.download("punkt_tab")
-nltk.download("stopwords")
+def preprocess(text):
+    """
+    Clean and preprocess news text without using NLTK.
+    This is Vercel-friendly because it does not download
+    any external NLP resources at runtime.
+    """
 
-stop_words = set(stopwords.words("english"))
+    text = str(text).lower()
+
+    # Extract alphabetic words
+    tokens = re.findall(r'\b[a-zA-Z]+\b', text)
+
+    # Remove English stopwords
+    tokens = [
+        word for word in tokens
+        if word not in ENGLISH_STOP_WORDS
+    ]
+
+    return " ".join(tokens)
 
 
 # --------------------------------------------------
 # LOAD DATASET
 # --------------------------------------------------
 
+print("Loading dataset...")
+
 true_df = pd.read_csv("Dataset/True.csv")
 fake_df = pd.read_csv("Dataset/Fake.csv")
 
+# Labels
 true_df["label"] = 1
 fake_df["label"] = 0
 
-data = pd.concat([true_df, fake_df], ignore_index=True)
+# Combine datasets
+data = pd.concat(
+    [true_df, fake_df],
+    ignore_index=True
+)
 
+# Handle missing values
 data["title"] = data["title"].fillna("")
 data["text"] = data["text"].fillna("")
 
-data["combined_text"] = data["title"] + " " + data["text"]
+# Combine headline + article
+data["combined_text"] = (
+    data["title"] + " " + data["text"]
+)
 
 
 # --------------------------------------------------
 # TEXT PREPROCESSING
 # --------------------------------------------------
 
-def preprocess(text):
-    text = text.lower()
-
-    tokens = nltk.word_tokenize(text)
-
-    tokens = [
-        word for word in tokens
-        if word.isalpha() and word not in stop_words
-    ]
-
-    return " ".join(tokens)
-
-
 print("Preprocessing dataset...")
 
-data["processed_text"] = data["combined_text"].apply(preprocess)
+data["processed_text"] = data["combined_text"].apply(
+    preprocess
+)
 
 
 # --------------------------------------------------
@@ -98,7 +111,10 @@ vectorizer = TfidfVectorizer(
     max_features=5000
 )
 
+# Fit only on training data
 X_train_tfidf = vectorizer.fit_transform(X_train)
+
+# Transform test data
 X_test_tfidf = vectorizer.transform(X_test)
 
 
@@ -148,25 +164,47 @@ for name, model in models.items():
 
     print(f"Training {name}...")
 
-    model.fit(X_train_tfidf, y_train)
+    model.fit(
+        X_train_tfidf,
+        y_train
+    )
 
-    predictions = model.predict(X_test_tfidf)
+    predictions = model.predict(
+        X_test_tfidf
+    )
 
     metrics[name] = {
+
         "accuracy": round(
-            accuracy_score(y_test, predictions) * 100, 2
+            accuracy_score(
+                y_test,
+                predictions
+            ) * 100,
+            2
         ),
 
         "precision": round(
-            precision_score(y_test, predictions) * 100, 2
+            precision_score(
+                y_test,
+                predictions
+            ) * 100,
+            2
         ),
 
         "recall": round(
-            recall_score(y_test, predictions) * 100, 2
+            recall_score(
+                y_test,
+                predictions
+            ) * 100,
+            2
         ),
 
         "f1": round(
-            f1_score(y_test, predictions) * 100, 2
+            f1_score(
+                y_test,
+                predictions
+            ) * 100,
+            2
         )
     }
 
@@ -184,18 +222,27 @@ default_model = models["Naive Bayes"]
 
 def predict_news(title, article, model_name):
 
+    # Combine headline + article
     combined = f"{title} {article}"
 
+    # Preprocess
     processed = preprocess(combined)
 
-    vector = vectorizer.transform([processed])
+    # Convert to TF-IDF
+    vector = vectorizer.transform(
+        [processed]
+    )
 
+    # Select model
     model = models.get(
         model_name,
         default_model
     )
 
-    prediction = int(model.predict(vector)[0])
+    # Make prediction
+    prediction = int(
+        model.predict(vector)[0]
+    )
 
     # REAL = 1
     # FAKE = 0
@@ -208,15 +255,24 @@ def predict_news(title, article, model_name):
     # Confidence
     if hasattr(model, "predict_proba"):
 
-        probabilities = model.predict_proba(vector)[0]
+        probabilities = model.predict_proba(
+            vector
+        )[0]
 
-        confidence = max(probabilities) * 100
+        confidence = max(
+            probabilities
+        ) * 100
 
     else:
 
+        # Passive Aggressive does not provide
+        # predict_proba by default.
         confidence = 0
 
-    return result, round(confidence, 2)
+    return result, round(
+        confidence,
+        2
+    )
 
 
 # --------------------------------------------------
@@ -238,9 +294,13 @@ def home():
 
     return render_template(
         "index.html",
+
         total_articles=total_articles,
+
         real_articles=real_articles,
+
         fake_articles=fake_articles,
+
         metrics=metrics
     )
 
@@ -249,10 +309,18 @@ def home():
 # API — PREDICT
 # --------------------------------------------------
 
-@app.route("/api/predict", methods=["POST"])
+@app.route(
+    "/api/predict",
+    methods=["POST"]
+)
 def api_predict():
 
     request_data = request.get_json()
+
+    if not request_data:
+        return jsonify({
+            "error": "Invalid request."
+        }), 400
 
     title = request_data.get(
         "title",
@@ -269,21 +337,28 @@ def api_predict():
         "Naive Bayes"
     )
 
+    # Check input
     if not title and not article:
 
         return jsonify({
-            "error": "Please enter a news headline or article."
+            "error":
+            "Please enter a news headline or article."
         }), 400
 
+    # Prediction
     result, confidence = predict_news(
         title,
         article,
         model_name
     )
 
+    # Return JSON response
     return jsonify({
+
         "result": result,
+
         "confidence": confidence,
+
         "model": model_name
     })
 
@@ -304,12 +379,26 @@ def api_metrics():
 
 if __name__ == "__main__":
 
-    print("\n===================================")
-    print(" TruthLens Fake News Detector")
-    print("===================================")
-    print("Open: http://127.0.0.1:5000")
-    print("===================================\n")
+    print(
+        "\n==================================="
+    )
+
+    print(
+        " TruthLens Fake News Detector"
+    )
+
+    print(
+        "==================================="
+    )
+
+    print(
+        "Open: http://127.0.0.1:5000"
+    )
+
+    print(
+        "===================================\n"
+    )
 
     app.run(
-        debug=True
+        debug=False
     )
